@@ -69,7 +69,9 @@ def build_event(video_id, user_id, event_type):
         "event_type": event_type,
         "video_id": video_id,
         "user_id": user_id,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        # Fixed format, always 6-digit microseconds, no UTC offset suffix --
+        # this must exactly match the TO_TIMESTAMP pattern in trend_scoring.py
+        "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f"),
     }
     if event_type == "view_complete":
         event["watch_duration_ms"] = int(
