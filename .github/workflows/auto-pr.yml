@@ -1,0 +1,30 @@
+name: Auto PR (dev -> master)
+
+on:
+  push:
+    branches: [dev]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  open-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open PR if none exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh pr list --head dev --base master --state open --json number --jq '.[].number')
+          if [ -z "$existing" ]; then
+            gh pr create \
+              --base master \
+              --head dev \
+              --title "Merge dev into master" \
+              --body-file .github/pull_request_template.md
+          else
+            echo "PR #$existing already open; nothing to do."
+          fi

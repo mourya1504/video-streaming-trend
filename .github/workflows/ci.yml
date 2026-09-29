@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [dev]
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install linter
+        run: pip install flake8
+
+      # Blocking check: only real errors (syntax errors, undefined names)
+      - name: Lint (errors only)
+        run: flake8 generator flink-jobs --select=E9,F63,F7,F82 --show-source
+
+      # Informational check: style warnings never fail the build
+      - name: Lint (style, non-blocking)
+        run: flake8 generator flink-jobs --max-line-length=160 --exit-zero
+
+      - name: Validate docker-compose.yml
+        run: docker compose config -q
