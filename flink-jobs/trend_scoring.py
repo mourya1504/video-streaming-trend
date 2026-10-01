@@ -14,7 +14,8 @@ from pyflink.table import EnvironmentSettings, TableEnvironment
 
 # --- Config (kept inline here; move to a shared config module if this grows) ---
 KAFKA_BOOTSTRAP_SERVERS = "kafka:19092"   # internal Docker-network listener
-KAFKA_TOPIC = "video-events"
+SOURCE_TOPIC = "video-events"
+SINK_TOPIC = "trend-scores"
 CONSUMER_GROUP = "flink-trend-scoring"
 
 WINDOW_SIZE = "1 MINUTES"     # how wide each window is
@@ -46,7 +47,7 @@ def main():
             WATERMARK FOR event_time AS event_time - INTERVAL '{WATERMARK_DELAY.split()[0]}' SECOND
         ) WITH (
             'connector' = 'kafka',
-            'topic' = '{KAFKA_TOPIC}',
+            'topic' = '{SOURCE_TOPIC}',
             'properties.bootstrap.servers' = '{KAFKA_BOOTSTRAP_SERVERS}',
             'properties.group.id' = '{CONSUMER_GROUP}',
             'scan.startup.mode' = 'latest-offset',
@@ -55,15 +56,21 @@ def main():
         )
     """)
 
-    # --- Sink: print results to the TaskManager's console/log output ---
-    t_env.execute_sql("""
-        CREATE TABLE trend_scores_print (
+    # --- Sink: write results to the trend-scores Kafka topic as JSON ---
+    # This decouples Flink from whatever consumes the results (ClickHouse,
+    # a dashboard, etc.) -- Flink doesn't need to know who reads this topic.
+    t_env.execute_sql(f"""
+        CREATE TABLE trend_scores_sink (
             video_id STRING,
             window_start TIMESTAMP(3),
             window_end TIMESTAMP(3),
             event_count BIGINT
         ) WITH (
-            'connector' = 'print'
+            'connector' = 'kafka',
+            'topic' = '{SINK_TOPIC}',
+            'properties.bootstrap.servers' = '{KAFKA_BOOTSTRAP_SERVERS}',
+            'format' = 'json',
+            'json.timestamp-format.standard' = 'ISO-8601'
         )
     """)
 
@@ -72,7 +79,7 @@ def main():
     # so windows overlap -- this gives smoother, more frequent trend updates
     # than a plain tumbling window would.
     t_env.execute_sql(f"""
-        INSERT INTO trend_scores_print
+        INSERT INTO trend_scores_sink
         SELECT
             video_id,
             window_start,

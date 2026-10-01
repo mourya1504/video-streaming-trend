@@ -27,3 +27,6 @@ curl http://localhost:8123 --data-binary "SELECT 1"
 
 # Trino: connect with the CLI (or use the web UI)
 docker exec -it trino trino --catalog hive
+
+# command to execute the clickhouse_schema.sql file via powershell with pipe operator.
+Get-Content sql\clickhouse_schemas.sql | docker exec -i clickhouse clickhouse-client 
