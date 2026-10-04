@@ -29,12 +29,12 @@ jobs:
           REVIEWER: ${{ github.event.inputs.reviewer || vars.PR_REVIEWER }}
         run: |
           branch="$GITHUB_REF_NAME"
-          existing=$(gh pr list --head "$branch" --base master --state open --json number --jq '.[0].number')
+          existing=$(gh pr list --head "$branch" --base "$PR_BASE_BRANCH" --state open --json number --jq '.[0].number // empty')
           if [ -z "$existing" ]; then
             args=(
-              --base master \
+              --base "$PR_BASE_BRANCH" \
               --head "$branch" \
-              --title "Merge $branch into master" \
+              --title "Merge $branch into $PR_BASE_BRANCH" \
               --body-file .github/pull_request_template.md
             )
             if [ -n "$REVIEWER" ]; then
