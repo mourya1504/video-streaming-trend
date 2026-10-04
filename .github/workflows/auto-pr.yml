@@ -3,7 +3,7 @@ name: Auto PR (branch -> master)
 on:
   push:
     branches-ignore:
-      - master
+      - master # CHANGE THIS to your repository's target branch (often main or master).
   workflow_dispatch:
     inputs:
       reviewer:
@@ -24,6 +24,8 @@ jobs:
       - name: Open PR if none exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_BASE_BRANCH: master # CHANGE THIS to the same target branch listed under branches-ignore above.
+          # Set the PR_REVIEWER Actions variable per repository, or pass a reviewer to workflow_dispatch.
           REVIEWER: ${{ github.event.inputs.reviewer || vars.PR_REVIEWER }}
         run: |
           branch="$GITHUB_REF_NAME"
