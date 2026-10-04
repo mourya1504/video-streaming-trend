@@ -1,8 +1,15 @@
-name: Auto PR (dev -> master)
+name: Auto PR (branch -> master)
 
 on:
   push:
-    branches: [dev]
+    branches-ignore:
+      - master
+  workflow_dispatch:
+    inputs:
+      reviewer:
+        description: GitHub username to request as a reviewer (optional)
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -17,14 +24,23 @@ jobs:
       - name: Open PR if none exists
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEWER: ${{ github.event.inputs.reviewer || vars.PR_REVIEWER }}
         run: |
-          existing=$(gh pr list --head dev --base master --state open --json number --jq '.[].number')
+          branch="$GITHUB_REF_NAME"
+          existing=$(gh pr list --head "$branch" --base master --state open --json number --jq '.[0].number')
           if [ -z "$existing" ]; then
-            gh pr create \
+            args=(
               --base master \
-              --head dev \
-              --title "Merge dev into master" \
+              --head "$branch" \
+              --title "Merge $branch into master" \
               --body-file .github/pull_request_template.md
+            )
+            if [ -n "$REVIEWER" ]; then
+              args+=(--reviewer "$REVIEWER")
+            fi
+            gh pr create "${args[@]}"
+          elif [ -n "$REVIEWER" ]; then
+            gh pr edit "$existing" --add-reviewer "$REVIEWER"
           else
-            echo "PR #$existing already open; nothing to do."
+            echo "PR #$existing already open; no reviewer configured."
           fi

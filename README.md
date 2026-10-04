@@ -6,6 +6,10 @@ docker compose up -d kafka kafka-ui
 docker compose up -d jobmanager taskmanager
 # Flink UI at http://localhost:8081
 
+
+#run the trend-scoring script:
+docker exec -it jobmanager flink run -py /opt/flink-jobs/trend_scoring.py
+
 # Step 5-6: schemas + batch layer (needs object storage + metastore + Spark)
 docker compose up -d minio hive-metastore-postgres hive-metastore spark-master spark-worker
 # MinIO console at http://localhost:9001 (minioadmin / minioadmin)
